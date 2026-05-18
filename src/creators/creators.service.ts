@@ -17,30 +17,35 @@ export class CreatorsService {
   }
 
   async findByAddress(stellarAddress: string) {
-    const creator = await this.prisma.creator.findFirst({
-      where: { stellarAddress },
-    });
+    const creator = await this.prisma.creator.findUnique({ where: { stellarAddress } });
     if (!creator) throw new NotFoundException('Creator not found');
     return creator;
   }
 
   async register(userId: string, dto: CreateCreatorDto, stellarAddress: string) {
     return this.prisma.creator.create({
-      data: { ...dto, stellarAddress, userId },
+      data: {
+        stellarAddress,
+        displayName: dto.displayName,
+        bio: dto.bio,
+        avatarUrl: dto.avatarUrl,
+        registeredAt: new Date(),
+        user: { connect: { id: userId } },
+      },
     });
   }
 
   async update(stellarAddress: string, dto: UpdateCreatorDto) {
-    const creator = await this.prisma.creator.findFirst({ where: { stellarAddress } });
+    const creator = await this.prisma.creator.findUnique({ where: { stellarAddress } });
     if (!creator) throw new NotFoundException('Creator not found');
     return this.prisma.creator.update({ where: { id: creator.id }, data: dto });
   }
 
   async getEarnings(stellarAddress: string) {
-    const creator = await this.prisma.creator.findFirst({ where: { stellarAddress } });
+    const creator = await this.prisma.creator.findUnique({ where: { stellarAddress } });
     if (!creator) throw new NotFoundException('Creator not found');
     const passes = await this.prisma.pass.findMany({
-      where: { tier: { creatorId: creator.id } },
+      where: { creatorId: creator.id },
       include: { tier: true },
     });
     const total = passes.reduce((sum, p) => sum + Number(p.tier.priceUsdc), 0);
